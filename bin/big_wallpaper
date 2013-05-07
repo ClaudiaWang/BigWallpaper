@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 #    Copyright 2012-2013, Yale Huang, yale.huang@trantect.com
@@ -28,6 +28,7 @@ from big_wallpaper.wallpaper_manager import WallPaperManager
 from big_wallpaper.ui_controller import UIController
 from big_wallpaper.config import Config
 from big_wallpaper import models
+from big_wallpaper.wallpaper_log import WallPaperLog
 
 class UpdateTimer:
     def __init__(self, interval=1800000):
@@ -56,14 +57,14 @@ class DBusService(dbus.service.Object):
         self.app.window.present()
 
 if __name__ == "__main__":
-    global manager, timer, ui_controller, config
+    global manager, timer, ui_controller, config, logger
     
+    config = Config(sys.argv)
+    logger = WallPaperLog(config.get_options().logpath)
     if dbus.SessionBus().request_name(DBUS_APPNAME) != \
             dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
-        print "Application already running!"
+        logger.log("Application already running!")
         exit(1)
-
-    config = Config(sys.argv)
 
     if not os.path.exists(config.get_options().dest):
         os.makedirs(config.get_options().dest)
