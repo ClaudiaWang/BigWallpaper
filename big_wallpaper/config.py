@@ -24,6 +24,9 @@ class Config:
         parser.add_option("-t", "--timeout", dest="timeout", type="int",
                           help="Timeout of every page/image downloading (in seconds) [default: %default]",
                           default=60)
+        parser.add_option("-l", "--logpath", dest="logpath", type="string",
+                          help="Logpath to point where the big_wallpaper logs will be stored. [default: %default]",
+                          default='/var/log/big_wallpaper.log')
 
         # Actually, only CONFIG is necessary for this parse_arg()
         (self.options, pending_args) = parser.parse_args(args)
@@ -65,6 +68,8 @@ class Config:
                    "%d" % self.options.keep)
         config.set(self.BIGWALLPAPER_SECTION, 'timeout',
                    "%d" % self.options.timeout)
+        config.set(self.BIGWALLPAPER_SECTION, 'logpath', 
+                   self.options.logpath)
 
         f = None
 

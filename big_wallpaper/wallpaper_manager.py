@@ -3,11 +3,14 @@ from gi.repository import Gio, GObject
 from models import *
 from storm.expr import And
 from datetime import datetime, timedelta
+from time import sleep
 
 import os
 import tempfile
 
 from big_wallpaper.download_thread import DownloadThread
+
+from wallpaper_log import getLogger
 
 class WallPaperManager:
     """
@@ -30,6 +33,7 @@ class WallPaperManager:
         prefix_dir: the installation folder of big_wallpaper
         img_dir: path to save downloaded images
         """
+
         self.config = config
         self.update_lock = None
         self.prefix_dir = prefix_dir
@@ -69,6 +73,13 @@ class WallPaperManager:
             pass
 
         if autostart:
+            autostart_desktop_dir_d = os.path.dirname(self.autostart_desktop_file)
+            #print "_____ f_source : " + self.desktop_source_file
+            #print "_____ f_dest : " + self.autostart_desktop_file
+            #print "_____ f_dir : " + autostart_desktop_dir_d
+            if os.path.exists( autostart_desktop_dir_d ) is False:
+                os.makedirs( autostart_desktop_dir_d )
+
             f_source = open(self.desktop_source_file, "r")
             f_dest = open(self.autostart_desktop_file, "w")
             try:
@@ -140,7 +151,7 @@ class WallPaperManager:
         try:
             image = self.get_wallpaper_image()
             if image is not None:
-                print "New wallpaper image: %s" % image.image_path
+                getLogger().log("New wallpaper image: %s" % image.image_path )
                 self.update_gsettings(image)
         finally:
             store().close()
@@ -183,7 +194,7 @@ class WallPaperManager:
 
         # unlink all images over KEEP duration
         expired_images = store().find(Image,
-                                      And(Image.state == Image.STATE_DOWNLOADED,
+                                       And(Image.state == Image.STATE_DOWNLOADED,
                                           Image.download_time < keep_timestamp))
         expired_images.set(state = Image.STATE_EXPIRED)
         store().flush()
@@ -192,7 +203,7 @@ class WallPaperManager:
 
         # Calcualte the updating cycle
         display_time_per_image = self.calculate_updating_cycle()
-        print "Display time per image: %d" % display_time_per_image.total_seconds()
+        getLogger().log("Display time per image: %d" % display_time_per_image.total_seconds() )
 
         # did the current wallpaper expire?
         if current_wallpaper is not None:
@@ -204,8 +215,7 @@ class WallPaperManager:
 
             if current_wallpaper.active_time >= datetime.now() - display_time_per_image:
                 # not expired, nothing to do
-                print "Time till the coming wallpaper switching: %d" % \
-                    (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds()
+                getLogger().log("Time till the coming wallpaper switching: %d" % (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds() )
                 return current_wallpaper
 
             current_wallpaper.state = Image.STATE_EXPIRED
@@ -230,13 +240,13 @@ class WallPaperManager:
         """
         Update wallpaper image with gsettings.
         """
-
-        print "image_file = %s" % (image.image_path)
-
-        if self.get_gsettings_wallpaper() != "file://" + image.image_path:
+        getLogger().log("image_file = %s" % (image.image_path) )
+        max_retry_time = 10;cnt = 0
+        while self.get_gsettings_wallpaper() != "file://" + image.image_path and cnt < max_retry_time:
             gsettings = Gio.Settings.new(self.SCHEMA)
             gsettings.set_string(self.KEY, "file://" + image.image_path)
             GObject.idle_add(lambda: self.ui_controller.notify_wallpaper_update(image))
+            cnt += 1;sleep(1)
     
     def get_gsettings_wallpaper(self):
         """
@@ -262,7 +272,7 @@ class WallPaperManager:
         Try to download new images and update wallpaper.
         """
 
-        print "Updating..."
+        getLogger().log('Updating...')
         download_thread = DownloadThread(self, self.ui_controller, self.config)
         download_thread.start()
 
