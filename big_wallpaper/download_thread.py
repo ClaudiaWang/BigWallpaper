@@ -11,7 +11,9 @@ import os
 import socket
 from wallpaper_log import WallPaperLog
 
+
 class DownloadThread(threading.Thread):
+
     """
     Thread for fetch homepage and image from Boston Big Picture.
     """
@@ -29,14 +31,15 @@ class DownloadThread(threading.Thread):
         """
         Fetch links defined in source_site.
         """
-        
+
         new_link = False
 
-        for site in store().find(SourceSite, SourceSite.active == True):
+        for site in list(SourceSite.select().where(SourceSite.active == True)):
             WallPaperLog.getInstance(WallPaperLog).info("Fetching %s" % site.name )
 
             try:
-                page = urlopen(site.url, timeout=self.config.get_options().timeout)
+                page = urlopen(
+                    site.url, timeout=self.config.get_options().timeout)
             except (HTTPError, URLError, TypeError):
                 WallPaperLog.getInstance(WallPaperLog).info("Failed to fetch %s" % site.url )
                 continue
@@ -50,12 +53,10 @@ class DownloadThread(threading.Thread):
 
             site.last_update = datetime.now()
 
-            store().flush()
-            store().commit()
+            site.save()
 
             WallPaperLog.getInstance(WallPaperLog).info("Got a new image link: %s" % link )
-
-            if store().find(Image, Image.source_image_url == unicode(link)).count() > 0:
+            if Image.select().where(Image.source_image_url == unicode(link)).count() > 0:
                 WallPaperLog.getInstance(WallPaperLog).info("Dulplicated image link: %s" % link)
                 continue
 
@@ -80,17 +81,16 @@ class DownloadThread(threading.Thread):
                 continue
 
             try:
-                image.source_description = unicode(p.xpath(site.description_xpath)[0])
+                image.source_description = unicode(
+                    p.xpath(site.description_xpath)[0])
             except (IndexError, TypeError):
                 WallPaperLog.getInstance(WallPaperLog).info("Failed to parse decription.")
                 image.source_description = None
                 continue
 
             WallPaperLog.getInstance(WallPaperLog).info("Created a new image object: %s" % image.source_image_url)
-            
-            store().add(image)
-            store().flush()
-            store().commit()
+
+            image.save()
 
             new_link = True
 
@@ -103,10 +103,10 @@ class DownloadThread(threading.Thread):
 
         image_downloaded = False
 
-        for image in store().find(Image, Image.state == Image.STATE_PENDING).order_by(Desc(Image.id)):
+        for image in list(Image.select().where(Image.state == Image.STATE_PENDING).order_by(Image.id.desc())):
             temp_file = self.manager.generate_img_file(".jpg")
 
-            if self.download_img_file(temp_file[0], image.source_image_url):                
+            if self.download_img_file(temp_file[0], image.source_image_url):
                 # os.close(temp_file[0])
                 
                 WallPaperLog.getInstance(WallPaperLog).info("Downloaded %s: %s" % (image.source_image_url, temp_file[1]))
@@ -117,14 +117,12 @@ class DownloadThread(threading.Thread):
 
                 image_downloaded = True
             else:
-                # os.close(temp_file[0])
                 os.unlink(temp_file[1])
                 WallPaperLog.getInstance(WallPaperLog).info("Failed to download %s" % image.source_image_url)
 
                 image.state = Image.STATE_FAILED
 
-            store().flush()
-            store().commit()
+            image.save()
 
         return image_downloaded
 
@@ -151,9 +149,6 @@ class DownloadThread(threading.Thread):
 
             self.manager.update_wallpaper()
         finally:
-            if store() is not None:
-                store().close()
-
             GObject.idle_add(self.ui_controller.finish_updating)
             self.manager.update_lock.release()
 
