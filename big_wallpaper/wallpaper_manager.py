@@ -10,7 +10,7 @@ import tempfile
 
 from big_wallpaper.download_thread import DownloadThread
 
-from wallpaper_log import getLogger
+from wallpaper_log import WallPaperLog
 
 class WallPaperManager:
     """
@@ -151,7 +151,7 @@ class WallPaperManager:
         try:
             image = self.get_wallpaper_image()
             if image is not None:
-                getLogger().log("New wallpaper image: %s" % image.image_path )
+                WallPaperLog.getInstance(WallPaperLog).info("New wallpaper image: %s" % image.image_path )
                 self.update_gsettings(image)
         finally:
             store().close()
@@ -203,7 +203,7 @@ class WallPaperManager:
 
         # Calcualte the updating cycle
         display_time_per_image = self.calculate_updating_cycle()
-        getLogger().log("Display time per image: %d" % display_time_per_image.total_seconds() )
+        WallPaperLog.getInstance(WallPaperLog).info("Display time per image: %d" % display_time_per_image.total_seconds() )
 
         # did the current wallpaper expire?
         if current_wallpaper is not None:
@@ -215,7 +215,7 @@ class WallPaperManager:
 
             if current_wallpaper.active_time >= datetime.now() - display_time_per_image:
                 # not expired, nothing to do
-                getLogger().log("Time till the coming wallpaper switching: %d" % (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds() )
+                WallPaperLog.getInstance(WallPaperLog).info("Time till the coming wallpaper switching: %d" % (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds() )
                 return current_wallpaper
 
             current_wallpaper.state = Image.STATE_EXPIRED
@@ -240,7 +240,7 @@ class WallPaperManager:
         """
         Update wallpaper image with gsettings.
         """
-        getLogger().log("image_file = %s" % (image.image_path) )
+        WallPaperLog.getInstance(WallPaperLog).info("image_file = %s" % (image.image_path) )
         max_retry_time = 10;cnt = 0
         while self.get_gsettings_wallpaper() != "file://" + image.image_path and cnt < max_retry_time:
             gsettings = Gio.Settings.new(self.SCHEMA)
@@ -272,7 +272,7 @@ class WallPaperManager:
         Try to download new images and update wallpaper.
         """
 
-        getLogger().log('Updating...')
+        WallPaperLog.getInstance(WallPaperLog).info('Updating...')
         download_thread = DownloadThread(self, self.ui_controller, self.config)
         download_thread.start()
 

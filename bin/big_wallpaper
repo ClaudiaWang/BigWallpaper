@@ -57,13 +57,13 @@ class DBusService(dbus.service.Object):
         self.app.window.present()
 
 if __name__ == "__main__":
-    global manager, timer, ui_controller, config, logger
+    global manager, timer, ui_controller, config
     
     config = Config(sys.argv)
-    logger = WallPaperLog(config.get_options().logpath)
+    WallPaperLog.init( WallPaperLog, config.get_options().logpath)
     if dbus.SessionBus().request_name(DBUS_APPNAME) != \
             dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
-        logger.log("Application already running!")
+        WallPaperLog.getInstance(WallPaperLog).info("Application already running!")
         exit(1)
 
     if not os.path.exists(config.get_options().dest):

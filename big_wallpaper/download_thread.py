@@ -9,7 +9,7 @@ from datetime import datetime
 import threading
 import os
 import socket
-from wallpaper_log import getLogger
+from wallpaper_log import WallPaperLog
 
 class DownloadThread(threading.Thread):
     """
@@ -33,19 +33,19 @@ class DownloadThread(threading.Thread):
         new_link = False
 
         for site in store().find(SourceSite, SourceSite.active == True):
-            getLogger().log("Fetching %s" % site.name )
+            WallPaperLog.getInstance(WallPaperLog).info("Fetching %s" % site.name )
 
             try:
                 page = urlopen(site.url, timeout=self.config.get_options().timeout)
             except (HTTPError, URLError, TypeError):
-                getLogger().log("Failed to fetch %s" % site.url )
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to fetch %s" % site.url )
                 continue
 
             try:
                 p = parse(page)
                 link = p.xpath(site.image_xpath)[0]
             except (HTTPException, IndexError, socket.error):
-                getLogger().log("Failed to parse image path." )
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to parse image path." )
                 continue
 
             site.last_update = datetime.now()
@@ -53,10 +53,10 @@ class DownloadThread(threading.Thread):
             store().flush()
             store().commit()
 
-            getLogger().log("Got a new image link: %s" % link )
+            WallPaperLog.getInstance(WallPaperLog).info("Got a new image link: %s" % link )
 
             if store().find(Image, Image.source_image_url == unicode(link)).count() > 0:
-                getLogger().log("Dulplicated image link: %s" % link)
+                WallPaperLog.getInstance(WallPaperLog).info("Dulplicated image link: %s" % link)
                 continue
 
             image = Image()
@@ -68,25 +68,25 @@ class DownloadThread(threading.Thread):
             try:
                 image.source_link = unicode(p.xpath(site.link_xpath)[0])
             except (IndexError, TypeError):
-                getLogger().log("Failed to parse link.")
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to parse link.")
                 image.source_link = None
                 continue
 
             try:
                 image.source_title = unicode(p.xpath(site.title_xpath)[0])
             except (IndexError, TypeError):
-                getLogger().log("Failed to parse title.")
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to parse title.")
                 image.source_title = None
                 continue
 
             try:
                 image.source_description = unicode(p.xpath(site.description_xpath)[0])
             except (IndexError, TypeError):
-                getLogger().log("Failed to parse decription.")
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to parse decription.")
                 image.source_description = None
                 continue
 
-            getLogger().log("Created a new image object: %s" % image.source_image_url)
+            WallPaperLog.getInstance(WallPaperLog).info("Created a new image object: %s" % image.source_image_url)
             
             store().add(image)
             store().flush()
@@ -109,7 +109,7 @@ class DownloadThread(threading.Thread):
             if self.download_img_file(temp_file[0], image.source_image_url):                
                 # os.close(temp_file[0])
                 
-                getLogger().log("Downloaded %s: %s" % (image.source_image_url, temp_file[1]))
+                WallPaperLog.getInstance(WallPaperLog).info("Downloaded %s: %s" % (image.source_image_url, temp_file[1]))
 
                 image.image_path = unicode(temp_file[1])
                 image.download_time = datetime.now()
@@ -119,7 +119,7 @@ class DownloadThread(threading.Thread):
             else:
                 # os.close(temp_file[0])
                 os.unlink(temp_file[1])
-                getLogger().log("Failed to download %s" % image.source_image_url)
+                WallPaperLog.getInstance(WallPaperLog).info("Failed to download %s" % image.source_image_url)
 
                 image.state = Image.STATE_FAILED
 
@@ -143,8 +143,8 @@ class DownloadThread(threading.Thread):
         GObject.idle_add(self.ui_controller.start_updating)
 
         try:
-            getLogger().log("Get URL...")
-            getLogger().log("Reconnected.")
+            WallPaperLog.getInstance(WallPaperLog).info("Get URL...")
+            WallPaperLog.getInstance(WallPaperLog).info("Reconnected.")
 
             self.fetch_links()
             self.fetch_images()
@@ -172,7 +172,7 @@ class DownloadThread(threading.Thread):
             f.write(img.read())
             f.close()
         except (HTTPException, IndexError, socket.error):
-            getLogger().log("Failed to download image: %s" % url)
+            WallPaperLog.getInstance(WallPaperLog).info("Failed to download image: %s" % url)
             return False
 
         return True

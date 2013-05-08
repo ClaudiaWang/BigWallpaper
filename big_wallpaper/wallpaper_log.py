@@ -1,23 +1,20 @@
 import logging
-import sys
-
-def getLogger():
-    return sys.modules['__main__'].logger;
 
 class WallPaperLog:
 
-    def __init__(self, path='/tmp/big_wallpaper.log'):
-        logging.basicConfig(filename=path, format='%(asctime)s %(levelname)s:%(message)s', datefmt='%Y/%m/%d %I:%M:%S %p', level=logging.DEBUG)
+    _instance = None;
 
-    def log(self, msg, level='info'):
-        print msg
-        if level == 'info':
-            logging.info(msg)
-        elif level == 'warning':
-            logging.warning(msg)
-        elif level == 'debug':
-            logging.debug(msg)
-        elif level == 'error':
-            logging.error(msg)
-        elif level == 'critical':
-            logging.critical(msg)
+    @staticmethod
+    def init(cls,path):
+        logging.basicConfig(filename=path, format='%(asctime)s %(levelname)s:%(message)s', datefmt='%Y/%m/%d %I:%M:%S %p', level=logging.DEBUG)
+        cls._instance = logging
+
+    @staticmethod
+    def getInstance(cls):
+        if cls._instance is None:
+            logging.basicConfig(filename='/tmp/big_wallpaper.log', format='%(asctime)s %(levelname)s:%(message)s', datefmt='%Y/%m/%d %I:%M:%S %p', level=logging.DEBUG)
+            cls._instance = logginig
+        return cls._instance
+
+    def __init__(self):
+        pass
